@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>抽签背书工具</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+            min-height: 100vh;
+            color: #e0e0e0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 30px 20px;
+        }
+
+        h1 {
+            font-size: 2.2rem;
+            margin-bottom: 30px;
+            background: linear-gradient(90deg, #f9d423, #ff4e50);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: none;
+            letter-spacing: 2px;
+        }
+
+        /* ===== 设置区域 ===== */
+        .settings-panel {
+            background: rgba(255,255,255,0.07);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 16px;
+            padding: 28px 32px;
+            width: 100%;
+            max-width: 660px;
+            margin-bottom: 28px;
+        }
+
+        .settings-panel h2 {
+            font-size: 1.1rem;
+            margin-bottom: 18px;
+            color: #ccc;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            padding-bottom: 10px;
+        }
+
+        .row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 14px;
+            flex-wrap: wrap;
+        }
+
+        .row label {
+            min-width: 90px;
+            font-size: 0.95rem;
+            color: #bbb;
+        }
+
+        .row input[type="number"] {
+            width: 90px;
+            padding: 8px 10px;
+            border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.2);
+            background: rgba(255,255,255,0.08);
+            color: #fff;
+            font-size: 0.95rem;
+            outline: none;
+            transition: border .2s;
+        }
+
+        .row input[type="number"]:focus {
+            border-color: #f9d423;
+        }
+
+        .file-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 18px;
+            border-radius: 8px;
+            border: 1px dashed rgba(255,255,255,0.3);
+            background: rgba(255,255,255,0.06);
+            color: #ddd;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all .2s;
+        }
+
+        .file-btn:hover {
+            background: rgba(255,255,255,0.12);
+            border-color: #f9d423;
+            color: #f9d423;
+        }
+
+        .file-btn.loaded {
+            border-color: #4caf50;
+            color: #4caf50;
+        }
+
+        .file-btn input[type="file"] {
+            display: none;
+        }
+
+        .file-status {
+            font-size: 0.82rem;
+            color: #888;
+            margin-left: 6px;
+        }
+
+        /* ===== 主舞台 ===== */
+        .stage {
+            background: rgba(255,255,255,0.07);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 16px;
+            padding: 36px 32px;
+            width: 100%;
+            max-width: 660px;
+            text-align: center;
+            margin-bottom: 28px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* 抽签结果卡片 */
+        .result-card {
+            min-height: 180px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .result-card .placeholder {
+            font-size: 1.05rem;
+            color: #666;
+        }
+
+        .result-card .student-no {
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: #f9d423;
+            animation: popIn .4s ease;
+        }
+
+        .result-card .question-text {
+            font-size: 1.15rem;
+            line-height: 1.7;
+            color: #e8e8e8;
+            max-width: 560px;
+            animation: popIn .4s ease;
+        }
+
+        .result-card .answer-text {
+            font-size: 1.05rem;
+            line-height: 1.6;
+            color: #4caf50;
+            max-width: 560px;
+            animation: fadeIn .3s ease;
+            background: rgba(76,175,80,0.08);
+            border: 1px solid rgba(76,175,80,0.2);
+            border-radius: 10px;
+            padding: 14px 20px;
+            width: 100%;
+        }
+
+        @keyframes popIn {
+            0% { transform: scale(0.7); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        @keyframes fadeIn {
+            0% { opacity: 0; transform: translateY(8px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+
+        /* 按钮组 */
+        .btn-group {
+            display: flex;
+            justify-content: center;
+            gap: 18px;
+        }
+
+        .btn {
+            padding: 14px 42px;
+            border: none;
+            border-radius: 12px;
+            font-size: 1.05rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all .25s;
+            letter-spacing: 1px;
+        }
+
+        .btn-draw {
+            background: linear-gradient(135deg, #f9d423, #ff4e50);
+            color: #1a1a2e;
+            box-shadow: 0 4px 20px rgba(249,212,35,0.3);
+        }
+
+        .btn-draw:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 28px rgba(249,212,35,0.45);
+        }
+
+        .btn-draw:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        .btn-answer {
+            background: rgba(76,175,80,0.15);
+            color: #4caf50;
+            border: 1px solid rgba(76,175,80,0.3);
+            opacity: 0.35;
+            cursor: not-allowed;
+        }
+
+        .btn-answer.active {
+            opacity: 1;
+            cursor: pointer;
+        }
+
+        .btn-answer.active:hover {
+            background: rgba(76,175,80,0.25);
+            transform: translateY(-2px);
+        }
+
+        /* ===== 状态栏 ===== */
+        .status-bar {
+            background: rgba(255,255,255,0.07);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 16px;
+            padding: 18px 28px;
+            width: 100%;
+            max-width: 660px;
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .status-item {
+            font-size: 0.88rem;
+            color: #999;
+        }
+
+        .status-item span {
+            color: #f9d423;
+            font-weight: 600;
+        }
+
+        .btn-reset {
+            padding: 6px 16px;
+            border-radius: 8px;
+            border: 1px solid rgba(255,75,75,0.4);
+            background: rgba(255,75,75,0.1);
+            color: #ff6b6b;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all .2s;
+        }
+
+        .btn-reset:hover {
+            background: rgba(255,75,75,0.2);
+        }
+
+        /* ===== 历史记录 ===== */
+        .history-panel {
+            background: rgba(255,255,255,0.07);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 16px;
+            padding: 22px 28px;
+            width: 100%;
+            max-width: 660px;
+            margin-top: 28px;
+        }
+
+        .history-panel h3 {
+            font-size: 1rem;
+            color: #aaa;
+            margin-bottom: 14px;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            padding-bottom: 8px;
+        }
+
+        .history-list {
+            max-height: 260px;
+            overflow-y: auto;
+        }
+
+        .history-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 14px;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            font-size: 0.9rem;
+        }
+
+        .history-item:last-child {
+            border-bottom: none;
+        }
+
+        .history-item .round-no {
+            flex-shrink: 0;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: rgba(249,212,35,0.15);
+            color: #f9d423;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.78rem;
+            font-weight: 700;
+        }
+
+        .history-item .info {
+            color: #bbb;
+            line-height: 1.5;
+        }
+
+        .history-item .info strong {
+            color: #f9d423;
+        }
+
+        /* toast */
+        .toast {
+            position: fixed;
+            top: 24px;
+            left: 50%;
+            transform: translateX(-50%) translateY(-80px);
+            background: rgba(255,75,75,0.92);
+            color: #fff;
+            padding: 12px 28px;
+            border-radius: 10px;
+            font-size: 0.92rem;
+            z-index: 999;
+            transition: transform .35s ease;
+            pointer-events: none;
+        }
+
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+        }
+
+        /* scrollbar */
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 4px; }
+    </style>
+</head>
+<body>
+
+<h1>🎲 抽签背书</h1>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<!-- 设置面板 -->
+<div class="settings-panel">
+    <h2>⚙️ 设置</h2>
+    <div class="row">
+        <label>学号范围</label>
+        <input type="number" id="stuStart" value="1" min="1"> 
+        <span style="color:#888">—</span>
+        <input type="number" id="stuEnd" value="50" min="1">
+    </div>
+    <div class="row">
+        <label>问题文件</label>
+        <label class="file-btn" id="qFileBtn">
+            📄 选择 TXT 文件
+            <input type="file" id="qFile" accept=".txt">
+        </label>
+        <span class="file-status" id="qStatus">未导入</span>
+    </div>
+    <div class="row">
+        <label>答案文件</label>
+        <label class="file-btn" id="aFileBtn">
+            📄 选择 TXT 文件
+            <input type="file" id="aFile" accept=".txt">
+        </label>
+        <span class="file-status" id="aStatus">未导入</span>
+    </div>
+</div>
+
+<!-- 主舞台 -->
+<div class="stage">
+    <div class="result-card" id="resultCard">
+        <div class="placeholder">导入文件并点击「抽签」开始</div>
+    </div>
+    <div class="btn-group">
+        <button class="btn btn-draw" id="drawBtn" disabled>🎯 抽签</button>
+        <button class="btn btn-answer" id="answerBtn">📖 Answer</button>
+    </div>
+</div>
+
+<!-- 状态栏 -->
+<div class="status-bar">
+    <div class="status-item">剩余问题: <span id="remainQ">0</span></div>
+    <div class="status-item">剩余学号: <span id="remainS">0</span></div>
+    <div class="status-item">已抽: <span id="doneCount">0</span> 轮</div>
+    <button class="btn-reset" id="resetBtn">🔄 重置</button>
+</div>
+
+<!-- 历史 -->
+<div class="history-panel">
+    <h3>📋 抽签记录</h3>
+    <div class="history-list" id="historyList">
+        <div style="color:#666;font-size:0.88rem;">暂无记录</div>
+    </div>
+</div>
+
+<script>
+    // ===== 状态 =====
+    let questions = {};   // { 序号: 问题文本 }
+    let answers = {};     // { 序号: 答案文本 }
+    let availableQIds = [];
+    let availableStudents = [];
+    let currentQ = null;   // 当前抽中的问题序号
+    let currentStu = null; // 当前抽中的学号
+    let round = 0;
+
+    // DOM
+    const stuStartEl = document.getElementById('stuStart');
+    const stuEndEl = document.getElementById('stuEnd');
+    const qFileEl = document.getElementById('qFile');
+    const aFileEl = document.getElementById('aFile');
+    const qStatusEl = document.getElementById('qStatus');
+    const aStatusEl = document.getElementById('aStatus');
+    const qFileBtnEl = document.getElementById('qFileBtn');
+    const aFileBtnEl = document.getElementById('aFileBtn');
+    const drawBtn = document.getElementById('drawBtn');
+    const answerBtn = document.getElementById('answerBtn');
+    const resultCard = document.getElementById('resultCard');
+    const remainQEl = document.getElementById('remainQ');
+    const remainSEl = document.getElementById('remainS');
+    const doneCountEl = document.getElementById('doneCount');
+    const resetBtn = document.getElementById('resetBtn');
+    const historyList = document.getElementById('historyList');
+    const toastEl = document.getElementById('toast');
+
+    // ===== 工具函数 =====
+    function showToast(msg) {
+        toastEl.textContent = msg;
+        toastEl.classList.add('show');
+        setTimeout(() => toastEl.classList.remove('show'), 2500);
+    }
+
+    function parseFile(text) {
+        // 支持格式：  数字. 内容  或  数字.内容（序号和内容之间可有可无空格）
+        const result = {};
+        const lines = text.split('\n');
+        for (let line of lines) {
+            line = line.trim();
+            if (!line) continue;
+            // 匹配: 数字 + '.' + 可选空格 + 内容
+            const m = line.match(/^(\d+)\.\s*(.*)/);
+            if (m) {
+                const id = parseInt(m[1]);
+                const content = m[2].trim();
+                if (content) result[id] = content;
+            }
+        }
+        return result;
+    }
+
+    function randomPick(arr) {
+        const idx = Math.floor(Math.random() * arr.length);
+        return arr.splice(idx, 1)[0];
+    }
+
+    function updateStatus() {
+        remainQEl.textContent = availableQIds.length;
+        remainSEl.textContent = availableStudents.length;
+        doneCountEl.textContent = round;
+    }
+
+    function checkReady() {
+        const qReady = Object.keys(questions).length > 0;
+        const aReady = Object.keys(answers).length > 0;
+        drawBtn.disabled = !(qReady && aReady);
+    }
+
+    function initPools() {
+        availableQIds = Object.keys(questions).map(Number);
+        const start = parseInt(stuStartEl.value) || 1;
+        const end = parseInt(stuEndEl.value) || 50;
+        availableStudents = [];
+        for (let i = Math.min(start, end); i <= Math.max(start, end); i++) {
+            availableStudents.push(i);
+        }
+        round = 0;
+        currentQ = null;
+        currentStu = null;
+        resultCard.innerHTML = '<div class="placeholder">导入文件并点击「抽签」开始</div>';
+        answerBtn.classList.remove('active');
+        historyList.innerHTML = '<div style="color:#666;font-size:0.88rem;">暂无记录</div>';
+        updateStatus();
+    }
+
+    // ===== 事件绑定 =====
+
+    // 问题文件
+    qFileEl.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+            questions = parseFile(ev.target.result);
+            const cnt = Object.keys(questions).length;
+            if (cnt === 0) {
+                showToast('问题文件解析失败，请检查格式');
+                return;
+            }
+            qStatusEl.textContent = `已导入 ${cnt} 题`;
+            qStatusEl.style.color = '#4caf50';
+            qFileBtnEl.classList.add('loaded');
+            initPools();
+            checkReady();
+        };
+        reader.readAsText(file);
+    });
+
+    // 答案文件
+    aFileEl.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+            answers = parseFile(ev.target.result);
+            const cnt = Object.keys(answers).length;
+            if (cnt === 0) {
+                showToast('答案文件解析失败，请检查格式');
+                return;
+            }
+            aStatusEl.textContent = `已导入 ${cnt} 条`;
+            aStatusEl.style.color = '#4caf50';
+            aFileBtnEl.classList.add('loaded');
+            checkReady();
+        };
+        reader.readAsText(file);
+    });
+
+    // 学号变更 → 重新初始化学号池
+    stuStartEl.addEventListener('change', () => {
+        if (Object.keys(questions).length > 0) initPools();
+    });
+    stuEndEl.addEventListener('change', () => {
+        if (Object.keys(questions).length > 0) initPools();
+    });
+
+    // 抽签
+    drawBtn.addEventListener('click', () => {
+        if (availableQIds.length === 0) {
+            showToast('所有问题已抽完！');
+            return;
+        }
+        if (availableStudents.length === 0) {
+            showToast('所有学号已抽完！');
+            return;
+        }
+
+        currentQ = randomPick(availableQIds);
+        currentStu = randomPick(availableStudents);
+        round++;
+
+        // 渲染结果
+        resultCard.innerHTML = `
+            <div class="student-no">🙋 学号 ${currentStu}</div>
+            <div class="question-text">❓ ${currentQ}. ${questions[currentQ]}</div>
+        `;
+
+        // 激活 Answer 按钮
+        answerBtn.classList.add('active');
+
+        // 添加历史
+        if (round === 1) historyList.innerHTML = '';
+        const item = document.createElement('div');
+        item.className = 'history-item';
+        item.innerHTML = `
+            <div class="round-no">${round}</div>
+            <div class="info">
+                学号 <strong>${currentStu}</strong> → 第 ${currentQ} 题：${questions[currentQ]}
+            </div>
+        `;
+        historyList.prepend(item);
+
+        updateStatus();
+
+        // 如果池子空了，禁用
+        if (availableQIds.length === 0 || availableStudents.length === 0) {
+            drawBtn.disabled = true;
+        }
+    });
+
+    // 显示答案
+    answerBtn.addEventListener('click', () => {
+        if (!answerBtn.classList.contains('active')) return;
+        if (currentQ === null) return;
+
+        const ans = answers[currentQ];
+        if (!ans) {
+            showToast('该题暂无对应答案');
+            return;
+        }
+
+        // 如果已有答案在卡片内则不重复添加
+        if (resultCard.querySelector('.answer-text')) return;
+
+        const div = document.createElement('div');
+        div.className = 'answer-text';
+        div.innerHTML = `📖 ${ans}`;
+        resultCard.appendChild(div);
+
+        // 点过之后取消激活
+        answerBtn.classList.remove('active');
+    });
+
+    // 重置
+    resetBtn.addEventListener('click', () => {
+        initPools();
+        checkReady();
+        updateStatus();
+    });
+
+    // 初始
+    updateStatus();
+</script>
+</body>
+</html>
